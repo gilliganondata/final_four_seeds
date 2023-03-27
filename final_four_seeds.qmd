@@ -1,0 +1,64 @@
+---
+title: "Seeding As a Prediction of Final Four Appearance"
+format: html
+editor: visual
+---
+
+## Background
+
+The men's NCAA Final Four in 2023 seems to have a preponderance of lower-than-expected seeds. Over time, have the seeds gotten better or worse at predicting who will land in the Final Four?
+
+If worse, it seems like the transfer portal and NIL have had the side effect of driving more parity in D-1 basketball, which makes it harder for the seeds to reflect truly cut-above-the-rest top seeds.
+
+## The Analysis
+
+Keeping it simple: we're just going to look at the mean and the median of the seedings for the four teams in the Final Four. Median seems like it's probably more appropriate.
+
+```{r get_data, echo=FALSE, message=FALSE}
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse)
+
+df <- read_csv("data/final_four_seeds.csv") |> 
+  pivot_longer(-year, names_to = "team", values_to = "team_seed") |> 
+  mutate(seed = gsub("^.*\\#(.*)$", "\\1", team_seed)) |> 
+  mutate(seed = as.numeric(seed))
+
+df_grouped <- df |> 
+  group_by(year) |> 
+  summarize(seed_median = median(seed), 
+            seed_mean = mean(seed),
+            seed_max = max(seed),
+            seed_min = min(seed)) |> 
+  ungroup()
+
+# Set up plotting the median and mean
+df_mean_median <- df_grouped |> 
+  select(year, seed_median, seed_mean) |> 
+  pivot_longer(-year, names_to = "metric", values_to = "value")
+
+```
+
+Let's start by looking at just the raw data, though:
+
+```{r echo=FALSE, message=FALSE}
+
+ggplot(df, aes(x = year, y = seed)) +
+  # geom_point(color = "#009CDE", alpha = 0.5) +
+  geom_point(shape = 16, fill = "black", alpha = 0.2) +
+  geom_line(aes(x = year, y = value, color = metric, size = metric), data = df_mean_median) +
+  scale_y_reverse(limits = c(16,1),breaks = seq(16,1)) +
+  scale_x_continuous(breaks = seq(1980, 2020, 5)) +
+  scale_color_manual(values = c("gray70", "#009CDE"), labels = c("Mean Seed   ", "Median Seed  ")) +
+   scale_size_manual(values = c(0.4,0.8), labels = c("Mean Seed   ", "Median Seed  ")) +
+  labs(title = "NCAA Men's March Madness Final Four by Seed",
+       subtitle = "Seeding of Each Individual Team Shown As a Dot",
+       y = "Team Seed") +
+  theme_minimal() +
+  theme(plot.title.position = "plot",
+        axis.title.x = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.position = "top",
+        legend.title = element_blank())
+
+```
